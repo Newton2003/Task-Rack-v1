@@ -1,0 +1,39 @@
+name: Flutter iOS Build
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: 'stable'
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Install Cocoapods
+        run: sudo gem install cocoapods
+
+      - name: Build iOS IPA
+        run: flutter build ipa --release
+
+      - name: Upload IPA to a release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: build/ios/ipa/YourAppName.ipa
+          asset_name: YourAppName.ipa
+          asset_content_type: application/octet-stream
