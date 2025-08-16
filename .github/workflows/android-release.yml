@@ -31,17 +31,16 @@ jobs:
       - name: Build Android Release
         run: flutter build apk --release
 
-      # Set the tag name for a manual run
-      - name: Set Manual Tag
-        id: set_manual_tag
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: echo "TAG_NAME=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-
-      # Set the tag name for a tag push
-      - name: Set Tag Push
-        id: set_tag_push
-        if: ${{ github.event_name == 'push' }}
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      # Get the tag name from the push event or manual input
+      - name: Get Tag Name
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            TAG_NAME=$(echo ${{ github.ref }} | sed 's/refs\/tags\///')
+          else
+            TAG_NAME=${{ github.event.inputs.tag }}
+          fi
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
@@ -49,8 +48,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.set_manual_tag.outputs.TAG_NAME || steps.set_tag_push.outputs.TAG_NAME }}
-          release_name: Release ${{ steps.set_manual_tag.outputs.TAG_NAME || steps.set_tag_push.outputs.TAG_NAME }}
+          tag_name: ${{ steps.get_tag.outputs.tag_name }}
+          release_name: Release ${{ steps.get_tag.outputs.tag_name }}
           draft: false
           prerelease: false
 
@@ -63,4 +62,5 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: build/app/outputs/flutter-apk/app-release.apk
           asset_name: app-release.apk
+          asset_content_type: application/vnd.android.package-archive
           asset_content_type: application/vnd.android.package-archive
