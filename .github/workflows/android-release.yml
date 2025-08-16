@@ -5,6 +5,11 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build'
+        required: true
+        default: 'v1.0.0'
 
 jobs:
   build:
@@ -12,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3 # Updated to v3
+        uses: actions/checkout@v3
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -26,9 +31,16 @@ jobs:
       - name: Build Android Release
         run: flutter build apk --release
 
-      # Get the tag name without the 'refs/tags/' prefix
-      - name: Get Tag Name
-        id: get_tag
+      # Set the tag name for a manual run
+      - name: Set Manual Tag
+        id: set_manual_tag
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: echo "TAG_NAME=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+
+      # Set the tag name for a tag push
+      - name: Set Tag Push
+        id: set_tag_push
+        if: ${{ github.event_name == 'push' }}
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create Release
@@ -37,14 +49,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }} # Corrected tag name
-          release_name: Release ${{ steps.get_tag.outputs.TAG_NAME }} # Corrected release name
+          tag_name: ${{ steps.set_manual_tag.outputs.TAG_NAME || steps.set_tag_push.outputs.TAG_NAME }}
+          release_name: Release ${{ steps.set_manual_tag.outputs.TAG_NAME || steps.set_tag_push.outputs.TAG_NAME }}
           draft: false
           prerelease: false
 
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: actions/upload-release-asset@v3 # Updated to v3
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
