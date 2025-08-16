@@ -31,7 +31,6 @@ jobs:
       - name: Build Android Release
         run: flutter build apk --release
 
-      # Get the tag name from the push event or manual input
       - name: Get Tag Name
         id: get_tag
         run: |
@@ -62,5 +61,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: build/app/outputs/flutter-apk/app-release.apk
           asset_name: app-release.apk
-          asset_content_type: application/vnd.android.package-archive
           asset_content_type: application/vnd.android.package-archive
